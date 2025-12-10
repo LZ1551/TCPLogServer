@@ -5,20 +5,26 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 //denna klass hanterar tcp med logg server
 public class TCPLogServer {
     private final int portESP = 1234;
     private final int portVisualServer = 4321;
 
-    private ArrayList<ClientHandler> clients;
+    private static Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
+    //private ArrayList<ClientHandler> clients;
     private VisualServer visualServer;
     private Logging logging;
 
+    private Buffer buffer;
+
     public TCPLogServer(){
+        buffer = new Buffer();
         logging = new Logging("log.txt");
-        clients = new ArrayList<>();
+        //clients = new ArrayList<>();
         new ConnectionListener(portVisualServer,"visual").start();
         new ConnectionListener(portESP,"esp").start();
         try {System.out.println("ip address: " + InetAddress.getLocalHost().getHostAddress());} catch (UnknownHostException e) {e.printStackTrace();}
@@ -62,20 +68,6 @@ public class TCPLogServer {
                 objectInputStream = new ObjectInputStream(socket.getInputStream()); System.out.println("visual ois created");
                 visualServer = this; System.out.println("visual server connected");
 
-
-                for(int i = 0; i < 10; i++){
-                    String log = "new:" + i + ":" + i;
-                    send(log);
-                }
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                String log = "move:5:1:8";
-                send(log);
-                log = "move:4:2:8";
-                send(log);
                 //*/
             } catch (IOException ignored) {}
         }
@@ -92,7 +84,9 @@ public class TCPLogServer {
         public void run() {
             while (true) {
                 try {
-
+                    Object object = buffer.get();
+                    objectOutputStream.writeObject(object);
+                    objectOutputStream.flush();
                 } catch (Exception e) {}
             }
         }
@@ -102,24 +96,46 @@ public class TCPLogServer {
         private ObjectInputStream objectInputStream;
         private ObjectOutputStream objectOutputStream;
 
+        private BufferedReader bufferedReader;
+        private Socket socket;
+        String macAddress;
+
         public ClientHandler(Socket socket){
             try{
-                objectOutputStream = new ObjectOutputStream(socket.getOutputStream());System.out.println("esp oos created");
-                objectInputStream = new ObjectInputStream(socket.getInputStream());System.out.println("esp oos created");
-                clients.add(this);
-                System.out.println("new esp");
+                //objectOutputStream = new ObjectOutputStream(socket.getOutputStream());System.out.println("esp oos created");
+                //objectInputStream = new ObjectInputStream(socket.getInputStream());System.out.println("esp oos created");
+                bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                this.socket = socket;
+
+                String handshake = bufferedReader.readLine();
+                if(handshake==null || handshake.trim().isEmpty()){
+                    System.out.println("handshake not succesful");
+                    return;
+                }
+
+                macAddress = handshake.trim();
+
+                clients.put(macAddress,this);
+                buffer.put(new Message(macAddress,"new"));
+                System.out.println("new esp: " + macAddress);
             }catch(IOException ignored){}
 
         }
         public void run(){
             while (true){
                 try {
-                    Object object = objectInputStream.readObject();
-                    if(object instanceof String string){
-                        visualServer.send(string); System.out.println("Received (sent to visual): " + string);
+                    //Object object = objectInputStream.readObject();
+                    String string = bufferedReader.readLine();
+                    buffer.put(new Message(macAddress,string));
+                    System.out.println("Received (sent to visual): " + string);
+
+                    /*
+                    if(string instanceof String){
+                        buffer.put(string);
+                        //visualServer.send(string); System.out.println("Received (sent to visual): " + string);
                         //logging.addLog(string);
-                    }
-                } catch (IOException | ClassNotFoundException e){}
+                    }//*/
+                } catch (IOException e){}
             }
         }
     }
