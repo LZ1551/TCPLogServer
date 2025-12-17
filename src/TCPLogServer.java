@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.time.LocalDateTime; // Import the LocalDateTime class
+import java.time.format.DateTimeFormatter; // Import the DateTimeFormatter class
 
 //denna klass hanterar tcp med logg server
 public class TCPLogServer {
@@ -124,10 +126,27 @@ public class TCPLogServer {
         public void run(){
             while (true){
                 try {
+                    //instans av logging klassen som skriver till textfil
+                    Logging logg = new Logging("log.txt");
+
+                    //instans av tid och datum
+                    LocalDateTime myDateObj = LocalDateTime.now();
+
+                    //för formaterting av tid och datum
+                    DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+                    //formaterat tid och datum
+                    String formattedDate = myDateObj.format(myFormatObj);
                     //Object object = objectInputStream.readObject();
                     String string = bufferedReader.readLine();
                     buffer.put(new Message(macAddress,string));
-                    System.out.println("Received (sent to visual): " + string);
+
+                    //hur det skrivs till text filen
+                    String loggingTextString = formattedDate +", "+ macAddress +", "+string ;
+                    System.out.println(loggingTextString);
+                    //lägger till och sparas i textfilen
+                    logg.addLog(loggingTextString);
+                    System.out.println(macAddress+": Received (sent to visual): " + string);
 
                     /*
                     if(string instanceof String){
