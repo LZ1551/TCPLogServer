@@ -137,29 +137,21 @@ public class TCPLogServer {
             try {
                 String inDataString;
                 while ((inDataString = bufferedReader.readLine()) != null) {
-                    try {
 
-                        //formaterat tid och datum
-                        String formattedDate = LocalDateTime.now().format(myFormatObj);
-                        //Object object = objectInputStream.readObject();
-                        String string = bufferedReader.readLine();
-                        buffer.put(new Message(macAddress, string));
+                    //formaterat tid och datum
+                    String formattedDate = LocalDateTime.now().format(myFormatObj);
+                    //Object object = objectInputStream.readObject();
+                    //String string = bufferedReader.readLine();
+                    buffer.put(new Message(macAddress, inDataString));
 
-                        //hur det skrivs till text filen
-                        String loggingTextString = formattedDate + ", " + macAddress + ", " + string;
-                        System.out.println(loggingTextString);
-                        //lägger till och sparas i textfilen
-                        logg.addLog(loggingTextString);
-                        System.out.println(macAddress + ": Received (sent to visual): " + string);
+                    //hur det skrivs till text filen
+                    String loggingTextString = formattedDate + ", " + macAddress + ", " + inDataString;
+                    System.out.println(loggingTextString);
+                    //lägger till och sparas i textfilen
+                    logg.addLog(loggingTextString);
+                    System.out.println(macAddress + ": Received (sent to visual): " + inDataString);
 
-                    /*
-                    if(string instanceof String){
-                        buffer.put(string);
-                        //visualServer.send(string); System.out.println("Received (sent to visual): " + string);
-                        //logging.addLog(string);
-                    }//*/
-                    } catch (IOException e) {
-                    }
+
                 }
             } catch (IOException e) {
                 System.out.println("connection  error at " + macAddress);

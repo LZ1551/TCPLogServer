@@ -7,6 +7,8 @@ public class Logging {
     private String logFilePath;
 
     //konstruktor där man sätter in fil namn
+    private static final Object fileLock = new Object();
+
     public Logging(String logFilePath) {
         this.logFilePath = logFilePath;
     }
@@ -20,11 +22,12 @@ public class Logging {
 
     //sparar meddelandet i filen
     private void writeToFile(String text) {
-        try (FileWriter fw = new FileWriter(logFilePath, true)) {
-            fw.write(text + "\n");
-        }
-        catch (IOException e) {
-            e.printStackTrace();
+        synchronized (fileLock) {
+            try (FileWriter fw = new FileWriter(logFilePath, true)) {
+                fw.write(text + "\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
