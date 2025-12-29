@@ -94,7 +94,7 @@ public class TCPLogServer {
         }
     }
 
-    private class ClientHandler extends Thread{
+    private class ClientHandler extends Thread {
         private ObjectInputStream objectInputStream;
         private ObjectOutputStream objectOutputStream;
 
@@ -102,59 +102,66 @@ public class TCPLogServer {
         private Socket socket;
         String macAddress;
 
-        public ClientHandler(Socket socket){
-            try{
+        public ClientHandler(Socket socket) {
+            try {
                 //objectOutputStream = new ObjectOutputStream(socket.getOutputStream());System.out.println("esp oos created");
                 //objectInputStream = new ObjectInputStream(socket.getInputStream());System.out.println("esp oos created");
                 bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 this.socket = socket;
 
                 String handshake = bufferedReader.readLine();
-                if(handshake==null || handshake.trim().isEmpty()){
+                if (handshake == null || handshake.trim().isEmpty()) {
                     System.out.println("handshake not succesful");
                     return;
                 }
 
                 macAddress = handshake.trim();
 
-                clients.put(macAddress,this);
-                buffer.put(new Message(macAddress,"new"));
+                clients.put(macAddress, this);
+                buffer.put(new Message(macAddress, "new"));
                 System.out.println("new esp: " + macAddress);
-            }catch(IOException ignored){}
+            } catch (IOException ignored) {
+            }
 
         }
-        public void run(){
-            while (true){
-                try {
-                    //instans av logging klassen som skriver till textfil
-                    Logging logg = new Logging("log.txt");
 
-                    //instans av tid och datum
-                    LocalDateTime myDateObj = LocalDateTime.now();
+        public void run() {
+            //instans av logging klassen som skriver till textfil
+            //flyttad utanför loopen för att saker ska vara smoother (så)
+            Logging logg = new Logging("log.txt");
+            //för formaterting av tid och datum
+            //utflyttad, så de inte händer flera gånger i onödan. (så)
+            DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
-                    //för formaterting av tid och datum
-                    DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+            try {
+                String inDataString;
+                while ((inDataString = bufferedReader.readLine()) != null) {
 
                     //formaterat tid och datum
-                    String formattedDate = myDateObj.format(myFormatObj);
+                    String formattedDate = LocalDateTime.now().format(myFormatObj);
                     //Object object = objectInputStream.readObject();
-                    String string = bufferedReader.readLine();
-                    buffer.put(new Message(macAddress,string));
+                    //String string = bufferedReader.readLine();
+                    buffer.put(new Message(macAddress, inDataString));
 
                     //hur det skrivs till text filen
-                    String loggingTextString = formattedDate +", "+ macAddress +", "+string ;
+                    String loggingTextString = formattedDate + ", " + macAddress + ", " + inDataString;
                     System.out.println(loggingTextString);
                     //lägger till och sparas i textfilen
                     logg.addLog(loggingTextString);
-                    System.out.println(macAddress+": Received (sent to visual): " + string);
+                    System.out.println(macAddress + ": Received (sent to visual): " + inDataString);
 
-                    /*
-                    if(string instanceof String){
-                        buffer.put(string);
-                        //visualServer.send(string); System.out.println("Received (sent to visual): " + string);
-                        //logging.addLog(string);
-                    }//*/
-                } catch (IOException e){}
+
+                }
+            } catch (IOException e) {
+                System.out.println("connection  error at " + macAddress);
+            } finally {
+
+                clients.remove(macAddress);
+                try {
+                    socket.close();
+                } catch (Exception e) {
+                }
             }
         }
     }
